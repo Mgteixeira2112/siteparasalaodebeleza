@@ -33,3 +33,23 @@ jobs:
 
       - name: Validate Playwright tests
         run: npm run test:e2e -- --list
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        env:
+          E2E_LOCAL: '1'
+          E2E_BASE_URL: http://127.0.0.1:4173/
+        run: npx playwright test tests/e2e/smoke.spec.ts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-ci-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
