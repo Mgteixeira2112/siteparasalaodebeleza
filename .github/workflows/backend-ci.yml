@@ -1,0 +1,35 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  migration-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d supabase/migrations
+          test "$(find supabase/migrations -type f -name '*.sql' | wc -l)" -gt 0
+
+          while IFS= read -r file; do
+            name="$(basename "$file")"
+            [[ "$name" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]
+          done < <(find supabase/migrations -type f -name '*.sql' | sort)
+
+          if grep -RniE 'alter[[:space:]]+table.*disable[[:space:]]+row[[:space:]]+level[[:space:]]+security' supabase/migrations; then
+            echo 'RLS disable statement detected.'
+            exit 1
+          fi
+
+          if grep -RniE 'service[_-]?role|sb_secret_' supabase/migrations; then
+            echo 'Privileged credential reference detected.'
+            exit 1
+          fi
