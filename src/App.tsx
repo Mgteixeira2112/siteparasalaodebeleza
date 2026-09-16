@@ -21,6 +21,25 @@ type Unit = {
   status: string
 }
 
+type Professional = {
+  id: string
+  display_name: string
+  status: string
+}
+
+type Service = {
+  id: string
+  name: string
+  duration_minutes: number
+  base_price_cents: number
+  status: string
+}
+
+type ProfessionalService = {
+  professional_id: string
+  service_id: string
+}
+
 const roleLabels: Record<string, string> = {
   owner: 'Proprietário',
   admin: 'Administrador',
@@ -30,7 +49,7 @@ const roleLabels: Record<string, string> = {
   cashier: 'Caixa',
 }
 
-const unitManagerRoles = new Set(['owner', 'admin', 'manager'])
+const managerRoles = new Set(['owner', 'admin', 'manager'])
 
 function AuthScreen() {
   const [email, setEmail] = useState('')
@@ -125,7 +144,7 @@ function UnitsPanel({ organizationId, role }: { organizationId: string; role: st
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  const canManage = unitManagerRoles.has(role)
+  const canManage = managerRoles.has(role)
 
   async function loadUnits() {
     setLoading(true)
@@ -213,6 +232,283 @@ function UnitsPanel({ organizationId, role }: { organizationId: string; role: st
       )}
 
       {loading && <span className="loading-state">Carregando…</span>}
+    </section>
+  )
+}
+
+function CatalogPanel({ organizationId, role }: { organizationId: string; role: string }) {
+  const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [links, setLinks] = useState<ProfessionalService[]>([])
+  const [professionalName, setProfessionalName] = useState('')
+  const [serviceName, setServiceName] = useState('')
+  const [durationMinutes, setDurationMinutes] = useState('')
+  const [basePrice, setBasePrice] = useState('')
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState('')
+  const [selectedServiceId, setSelectedServiceId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const canManage = managerRoles.has(role)
+
+  async function loadCatalog() {
+    setLoading(true)
+    setMessage('')
+
+    const [professionalsResult, servicesResult, linksResult] = await Promise.all([
+      supabase
+        .from('salon_professionals')
+        .select('id, display_name, status')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .order('display_name'),
+      supabase
+        .from('salon_services')
+        .select('id, name, duration_minutes, base_price_cents, status')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .order('name'),
+      supabase
+        .from('salon_professional_services')
+        .select('professional_id, service_id')
+        .eq('organization_id', organizationId),
+    ])
+
+    const error = professionalsResult.error ?? servicesResult.error ?? linksResult.error
+    if (error) {
+      setMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    const nextProfessionals = (professionalsResult.data ?? []) as Professional[]
+    const nextServices = (servicesResult.data ?? []) as Service[]
+    const nextLinks = (linksResult.data ?? []) as ProfessionalService[]
+
+    setProfessionals(nextProfessionals)
+    setServices(nextServices)
+    setLinks(nextLinks)
+    setSelectedProfessionalId((current) =>
+      nextProfessionals.some((professional) => professional.id === current)
+        ? current
+        : nextProfessionals[0]?.id ?? '',
+    )
+    setSelectedServiceId((current) =>
+      nextServices.some((service) => service.id === current) ? current : nextServices[0]?.id ?? '',
+    )
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    void loadCatalog()
+  }, [organizationId])
+
+  async function createProfessional(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.from('salon_professionals').insert({
+      organization_id: organizationId,
+      display_name: professionalName.trim(),
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setProfessionalName('')
+      await loadCatalog()
+    }
+
+    setBusy(false)
+  }
+
+  async function createService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage) return
+
+    const duration = Number(durationMinutes)
+    const priceCents = Math.round(Number(basePrice) * 100)
+    if (!Number.isInteger(duration) || duration <= 0 || !Number.isFinite(priceCents) || priceCents < 0) {
+      setMessage('Revise duração e preço.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.from('salon_services').insert({
+      organization_id: organizationId,
+      name: serviceName.trim(),
+      duration_minutes: duration,
+      base_price_cents: priceCents,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setServiceName('')
+      setDurationMinutes('')
+      setBasePrice('')
+      await loadCatalog()
+    }
+
+    setBusy(false)
+  }
+
+  const selectedLinkExists = links.some(
+    (link) => link.professional_id === selectedProfessionalId && link.service_id === selectedServiceId,
+  )
+
+  async function linkProfessionalService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage || !selectedProfessionalId || !selectedServiceId || selectedLinkExists) return
+
+    setBusy(true)
+    setMessage('')
+
+    const { error } = await supabase.from('salon_professional_services').insert({
+      organization_id: organizationId,
+      professional_id: selectedProfessionalId,
+      service_id: selectedServiceId,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      await loadCatalog()
+    }
+
+    setBusy(false)
+  }
+
+  const professionalNames = new Map(professionals.map((professional) => [professional.id, professional.display_name]))
+  const serviceNames = new Map(services.map((service) => [service.id, service.name]))
+  const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  return (
+    <section className="auth-card compact-card">
+      <div>
+        <h1>Equipe e serviços</h1>
+      </div>
+
+      {canManage && (
+        <>
+          <form className="auth-form" onSubmit={createProfessional}>
+            <label>
+              Profissional
+              <input
+                value={professionalName}
+                onChange={(event) => setProfessionalName(event.target.value)}
+                required
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={busy}>
+              Adicionar profissional
+            </button>
+          </form>
+
+          <form className="auth-form" onSubmit={createService}>
+            <label>
+              Serviço
+              <input value={serviceName} onChange={(event) => setServiceName(event.target.value)} required />
+            </label>
+            <label>
+              Duração (min)
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Preço base (R$)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={basePrice}
+                onChange={(event) => setBasePrice(event.target.value)}
+                required
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={busy}>
+              Adicionar serviço
+            </button>
+          </form>
+
+          {professionals.length > 0 && services.length > 0 && (
+            <form className="auth-form" onSubmit={linkProfessionalService}>
+              <label>
+                Profissional
+                <select
+                  value={selectedProfessionalId}
+                  onChange={(event) => setSelectedProfessionalId(event.target.value)}
+                >
+                  {professionals.map((professional) => (
+                    <option key={professional.id} value={professional.id}>
+                      {professional.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Serviço habilitado
+                <select value={selectedServiceId} onChange={(event) => setSelectedServiceId(event.target.value)}>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="secondary-button" type="submit" disabled={busy || selectedLinkExists}>
+                {selectedLinkExists ? 'Serviço habilitado' : 'Habilitar serviço'}
+              </button>
+            </form>
+          )}
+        </>
+      )}
+
+      {message && <p className="form-message">{message}</p>}
+      {loading && <span className="loading-state">Carregando…</span>}
+
+      {!loading && professionals.length > 0 && (
+        <div>
+          {professionals.map((professional) => (
+            <div key={professional.id}>
+              <strong>{professional.display_name}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && services.length > 0 && (
+        <div>
+          {services.map((service) => (
+            <div key={service.id}>
+              <strong>{service.name}</strong>
+              <span> · {service.duration_minutes} min · {money.format(service.base_price_cents / 100)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && links.length > 0 && (
+        <div>
+          {links.map((link) => (
+            <div key={`${link.professional_id}:${link.service_id}`}>
+              <span>{professionalNames.get(link.professional_id)} · {serviceNames.get(link.service_id)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -378,7 +674,10 @@ function SalonGate({ user }: { user: User }) {
 
       <main className="workspace-content">
         {selectedOrganizationId && selectedMembership && (
-          <UnitsPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
+          <div className="auth-form">
+            <UnitsPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
+            <CatalogPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
+          </div>
         )}
       </main>
     </div>
