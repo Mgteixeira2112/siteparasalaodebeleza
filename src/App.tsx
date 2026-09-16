@@ -14,6 +14,13 @@ type Organization = {
   name: string
 }
 
+type Unit = {
+  id: string
+  name: string
+  code: string | null
+  status: string
+}
+
 const roleLabels: Record<string, string> = {
   owner: 'Proprietário',
   admin: 'Administrador',
@@ -22,6 +29,8 @@ const roleLabels: Record<string, string> = {
   professional: 'Profissional',
   cashier: 'Caixa',
 }
+
+const unitManagerRoles = new Set(['owner', 'admin', 'manager'])
 
 function AuthScreen() {
   const [email, setEmail] = useState('')
@@ -105,6 +114,106 @@ function AuthScreen() {
         </form>
       </section>
     </main>
+  )
+}
+
+function UnitsPanel({ organizationId, role }: { organizationId: string; role: string }) {
+  const [units, setUnits] = useState<Unit[]>([])
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const canManage = unitManagerRoles.has(role)
+
+  async function loadUnits() {
+    setLoading(true)
+    setMessage('')
+
+    const { data, error } = await supabase
+      .from('salon_units')
+      .select('id, name, code, status')
+      .eq('organization_id', organizationId)
+      .eq('status', 'active')
+      .order('name')
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setUnits((data ?? []) as Unit[])
+    }
+
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    void loadUnits()
+  }, [organizationId])
+
+  async function createUnit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!canManage) return
+
+    setBusy(true)
+    setMessage('')
+
+    const cleanCode = code.trim()
+    const { error } = await supabase.from('salon_units').insert({
+      organization_id: organizationId,
+      name: name.trim(),
+      code: cleanCode || null,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setName('')
+      setCode('')
+      await loadUnits()
+    }
+
+    setBusy(false)
+  }
+
+  return (
+    <section className="auth-card compact-card">
+      <div>
+        <h1>Unidades</h1>
+      </div>
+
+      {canManage && (
+        <form className="auth-form" onSubmit={createUnit}>
+          <label>
+            Nome
+            <input value={name} onChange={(event) => setName(event.target.value)} required />
+          </label>
+          <label>
+            Código
+            <input value={code} onChange={(event) => setCode(event.target.value)} />
+          </label>
+          {message && <p className="form-message">{message}</p>}
+          <button className="primary-button" type="submit" disabled={busy}>
+            Adicionar unidade
+          </button>
+        </form>
+      )}
+
+      {!canManage && message && <p className="form-message">{message}</p>}
+
+      {!loading && units.length > 0 && (
+        <div>
+          {units.map((unit) => (
+            <div key={unit.id}>
+              <strong>{unit.name}</strong>
+              {unit.code && <span> · {unit.code}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loading && <span className="loading-state">Carregando…</span>}
+    </section>
   )
 }
 
@@ -268,7 +377,9 @@ function SalonGate({ user }: { user: User }) {
       </header>
 
       <main className="workspace-content">
-        <h1>Sistema de Salão</h1>
+        {selectedOrganizationId && selectedMembership && (
+          <UnitsPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
+        )}
       </main>
     </div>
   )
