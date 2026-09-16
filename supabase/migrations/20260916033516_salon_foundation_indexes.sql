@@ -1,0 +1,1 @@
+create index salon_organizations_created_by_idx on public.salon_organizations(created_by);
