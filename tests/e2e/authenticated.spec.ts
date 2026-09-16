@@ -7,7 +7,7 @@ test.describe('fluxo autenticado do salão', () => {
   test.skip(!email || !password, 'E2E_EMAIL e E2E_PASSWORD não configurados')
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('./')
     await page.getByLabel('E-mail').fill(email!)
     await page.getByLabel('Senha').fill(password!)
     await page.getByRole('button', { name: /entrar/i }).click()
