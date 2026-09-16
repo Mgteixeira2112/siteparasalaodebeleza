@@ -30,3 +30,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Validate Playwright tests
+        run: npm run test:e2e -- --list
