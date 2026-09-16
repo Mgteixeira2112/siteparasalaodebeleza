@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
+import { AvailabilityPanel } from './AvailabilityPanel'
 
 type Membership = {
   organization_id: string
@@ -677,6 +678,7 @@ function SalonGate({ user }: { user: User }) {
           <div className="auth-form">
             <UnitsPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
             <CatalogPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
+            <AvailabilityPanel organizationId={selectedOrganizationId} role={selectedMembership.role} />
           </div>
         )}
       </main>
