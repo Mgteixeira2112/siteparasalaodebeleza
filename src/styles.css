@@ -29,16 +29,243 @@ textarea {
   font: inherit;
 }
 
-.app-shell {
+button,
+select {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.app-shell,
+.auth-shell {
   min-height: 100vh;
+}
+
+.app-shell {
   display: grid;
   place-items: center;
   padding: 24px;
 }
 
-.app-shell h1 {
+.loading-state {
+  color: #77716b;
+  font-size: 0.95rem;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  padding: 28px 20px;
+  background: linear-gradient(145deg, #f7f5f2 0%, #efe9e2 100%);
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 24px;
+  padding: 34px;
+  border: 1px solid #e2dcd5;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 50px rgba(70, 56, 43, 0.08);
+}
+
+.compact-card {
+  gap: 20px;
+}
+
+.auth-card h1,
+.workspace-content h1 {
   margin: 0;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 650;
   letter-spacing: -0.04em;
+}
+
+.auth-card h1 {
+  font-size: 1.9rem;
+}
+
+.auth-card p {
+  margin: 6px 0 0;
+  color: #756f69;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #211f1d;
+  color: #ffffff;
+  font-weight: 750;
+  font-size: 1.25rem;
+}
+
+.small-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: #4f4a46;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.auth-form input,
+.topbar select {
+  width: 100%;
+  border: 1px solid #d7d0c8;
+  border-radius: 12px;
+  background: #fff;
+  color: #211f1d;
+  outline: none;
+}
+
+.auth-form input {
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+.auth-form input:focus,
+.topbar select:focus {
+  border-color: #8f8377;
+  box-shadow: 0 0 0 3px rgba(143, 131, 119, 0.12);
+}
+
+.primary-button,
+.secondary-button,
+.text-button {
+  border: 0;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 46px;
+  padding: 10px 14px;
+}
+
+.primary-button {
+  background: #211f1d;
+  color: #fff;
+}
+
+.secondary-button {
+  background: #eee8e1;
+  color: #322e2a;
+}
+
+.text-button {
+  padding: 9px 11px;
+  background: transparent;
+  color: #5f5954;
+}
+
+.form-message {
+  margin: 0 !important;
+  color: #9b332b !important;
+  font-size: 0.86rem;
+}
+
+.workspace-shell {
+  min-height: 100vh;
+  background: #f7f5f2;
+}
+
+.topbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #e5dfd8;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.topbar-brand,
+.topbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-brand {
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar-brand div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topbar-brand strong,
+.topbar-brand span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-brand span {
+  color: #7a746e;
+  font-size: 0.78rem;
+}
+
+.topbar-actions {
+  gap: 8px;
+}
+
+.topbar select {
+  max-width: 220px;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.workspace-content {
+  padding: 32px 24px;
+}
+
+.workspace-content h1 {
+  font-size: clamp(1.7rem, 4vw, 2.35rem);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 26px 22px;
+    border-radius: 20px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    padding: 12px 16px;
+  }
+
+  .topbar-actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .topbar select {
+    max-width: 160px;
+  }
+
+  .workspace-content {
+    padding: 26px 18px;
+  }
 }
