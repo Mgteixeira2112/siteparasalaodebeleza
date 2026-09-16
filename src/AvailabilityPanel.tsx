@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { AppointmentsPanel } from './AppointmentsPanel'
+import { TodayPanel } from './TodayPanel'
 
 type Professional = {
   id: string
@@ -152,6 +153,8 @@ export function AvailabilityPanel({ organizationId, role }: { organizationId: st
 
   return (
     <>
+      <TodayPanel organizationId={organizationId} />
+
       <section className="auth-card compact-card">
         <div>
           <h1>Disponibilidade</h1>
