@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { AppointmentsPanel } from './AppointmentsPanel'
 
 type Professional = {
   id: string
@@ -150,83 +151,87 @@ export function AvailabilityPanel({ organizationId, role }: { organizationId: st
   const unitNames = new Map(units.map((unit) => [unit.id, unit.code ? `${unit.name} · ${unit.code}` : unit.name]))
 
   return (
-    <section className="auth-card compact-card">
-      <div>
-        <h1>Disponibilidade</h1>
-      </div>
-
-      {canManage && professionals.length > 0 && units.length > 0 && (
-        <form className="auth-form" onSubmit={createAvailability}>
-          <label>
-            Profissional
-            <select value={professionalId} onChange={(event) => setProfessionalId(event.target.value)}>
-              {professionals.map((professional) => (
-                <option key={professional.id} value={professional.id}>
-                  {professional.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Unidade
-            <select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.code ? `${unit.name} · ${unit.code}` : unit.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Dia
-            <select value={weekday} onChange={(event) => setWeekday(event.target.value)}>
-              {weekdayLabels.map((label, index) => (
-                <option key={label} value={index}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Início
-            <input type="time" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required />
-          </label>
-
-          <label>
-            Fim
-            <input type="time" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required />
-          </label>
-
-          <button className="primary-button" type="submit" disabled={busy}>
-            Adicionar horário
-          </button>
-        </form>
-      )}
-
-      {message && <p className="form-message">{message}</p>}
-      {loading && <span className="loading-state">Carregando…</span>}
-
-      {!loading && availability.length > 0 && (
-        <div className="auth-form">
-          {availability.map((item) => (
-            <div key={item.id}>
-              <strong>{professionalNames.get(item.professional_id)}</strong>
-              <span>
-                {' '}· {weekdayLabels[item.weekday]} · {item.starts_at.slice(0, 5)}–{item.ends_at.slice(0, 5)} ·{' '}
-                {unitNames.get(item.unit_id)}
-              </span>
-              {canManage && (
-                <button className="text-button" type="button" disabled={busy} onClick={() => void removeAvailability(item.id)}>
-                  Remover
-                </button>
-              )}
-            </div>
-          ))}
+    <>
+      <section className="auth-card compact-card">
+        <div>
+          <h1>Disponibilidade</h1>
         </div>
-      )}
-    </section>
+
+        {canManage && professionals.length > 0 && units.length > 0 && (
+          <form className="auth-form" onSubmit={createAvailability}>
+            <label>
+              Profissional
+              <select value={professionalId} onChange={(event) => setProfessionalId(event.target.value)}>
+                {professionals.map((professional) => (
+                  <option key={professional.id} value={professional.id}>
+                    {professional.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Unidade
+              <select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.code ? `${unit.name} · ${unit.code}` : unit.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Dia
+              <select value={weekday} onChange={(event) => setWeekday(event.target.value)}>
+                {weekdayLabels.map((label, index) => (
+                  <option key={label} value={index}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Início
+              <input type="time" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required />
+            </label>
+
+            <label>
+              Fim
+              <input type="time" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required />
+            </label>
+
+            <button className="primary-button" type="submit" disabled={busy}>
+              Adicionar horário
+            </button>
+          </form>
+        )}
+
+        {message && <p className="form-message">{message}</p>}
+        {loading && <span className="loading-state">Carregando…</span>}
+
+        {!loading && availability.length > 0 && (
+          <div className="auth-form">
+            {availability.map((item) => (
+              <div key={item.id}>
+                <strong>{professionalNames.get(item.professional_id)}</strong>
+                <span>
+                  {' '}· {weekdayLabels[item.weekday]} · {item.starts_at.slice(0, 5)}–{item.ends_at.slice(0, 5)} ·{' '}
+                  {unitNames.get(item.unit_id)}
+                </span>
+                {canManage && (
+                  <button className="text-button" type="button" disabled={busy} onClick={() => void removeAvailability(item.id)}>
+                    Remover
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <AppointmentsPanel organizationId={organizationId} role={role} />
+    </>
   )
 }
