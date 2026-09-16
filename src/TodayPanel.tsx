@@ -17,6 +17,20 @@ type NamedRow = {
   name: string
 }
 
+type Action = { label: string; status: string }
+
+const operatorRoles = new Set(['owner', 'admin', 'manager', 'receptionist'])
+
+const actionsByStatus: Record<string, Action[]> = {
+  scheduled: [
+    { label: 'Confirmar', status: 'confirmed' },
+    { label: 'Registrar chegada', status: 'checked_in' },
+  ],
+  confirmed: [{ label: 'Registrar chegada', status: 'checked_in' }],
+  checked_in: [{ label: 'Iniciar', status: 'in_service' }],
+  in_service: [{ label: 'Finalizar', status: 'completed' }],
+}
+
 const statusLabels: Record<string, string> = {
   scheduled: 'Agendado',
   confirmed: 'Confirmado',
@@ -41,6 +55,8 @@ export function TodayPanel({ organizationId }: { organizationId: string }) {
   const [professionals, setProfessionals] = useState<NamedRow[]>([])
   const [services, setServices] = useState<NamedRow[]>([])
   const [units, setUnits] = useState<NamedRow[]>([])
+  const [canOperate, setCanOperate] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -85,6 +101,23 @@ export function TodayPanel({ organizationId }: { organizationId: string }) {
   }
 
   useEffect(() => {
+    let active = true
+    setCanOperate(false)
+    void supabase.auth.getUser().then(async ({ data, error }) => {
+      if (error || !data.user) return
+      const membership = await supabase
+        .from('salon_members')
+        .select('role')
+        .eq('organization_id', organizationId)
+        .eq('user_id', data.user.id)
+        .eq('status', 'active')
+        .maybeSingle()
+      if (active && !membership.error) setCanOperate(operatorRoles.has(membership.data?.role ?? ''))
+    })
+    return () => { active = false }
+  }, [organizationId])
+
+  useEffect(() => {
     void loadToday()
 
     const channel = supabase
@@ -105,6 +138,26 @@ export function TodayPanel({ organizationId }: { organizationId: string }) {
       void supabase.removeChannel(channel)
     }
   }, [organizationId])
+
+  async function transition(appointment: Appointment, nextStatus: string) {
+    if (!canOperate || busyId) return
+    if (nextStatus === 'completed' && !window.confirm('Finalizar atendimento e gerar a comanda?')) return
+
+    setBusyId(appointment.id)
+    setMessage('')
+    const { error } = await supabase.rpc('salon_transition_appointment', {
+      p_organization_id: organizationId,
+      p_appointment_id: appointment.id,
+      p_to_status: nextStatus,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      await loadToday()
+    }
+    setBusyId(null)
+  }
 
   const names = useMemo(
     () => ({
@@ -128,11 +181,11 @@ export function TodayPanel({ organizationId }: { organizationId: string }) {
       <div>
         <h1>Hoje</h1>
         {!loading && appointments.length > 0 && (
-          <p>{activeCount} em andamento · {inServiceCount} em atendimento · {completedCount} finalizados</p>
+          <p>{activeCount} ativos · {inServiceCount} em atendimento · {completedCount} finalizados</p>
         )}
       </div>
 
-      {message && <p className="form-message">{message}</p>}
+      {message && <p className="form-message" role="alert">{message}</p>}
       {loading && <span className="loading-state">Carregando…</span>}
 
       {!loading && appointments.length === 0 && <span className="loading-state">Nenhum atendimento hoje.</span>}
@@ -146,6 +199,17 @@ export function TodayPanel({ organizationId }: { organizationId: string }) {
                 {' '}· {names.services.get(appointment.service_id)} · {names.professionals.get(appointment.professional_id)} ·{' '}
                 {names.units.get(appointment.unit_id)} · {statusLabels[appointment.status] ?? appointment.status}
               </span>
+              {canOperate && (actionsByStatus[appointment.status] ?? []).map((action) => (
+                <button
+                  key={action.status}
+                  className="text-button"
+                  type="button"
+                  disabled={busyId !== null}
+                  onClick={() => void transition(appointment, action.status)}
+                >
+                  {action.label}
+                </button>
+              ))}
             </div>
           ))}
         </div>
