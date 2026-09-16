@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const local = process.env.E2E_LOCAL === '1'
 const baseURL = process.env.E2E_BASE_URL ?? 'https://mgteixeira2112.github.io/siteparasalaodebeleza/'
 
 export default defineConfig({
@@ -11,6 +12,12 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  webServer: local ? {
+    command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
+    url: 'http://127.0.0.1:4173/',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  } : undefined,
   use: {
     baseURL,
     trace: 'retain-on-failure',
@@ -19,10 +26,5 @@ export default defineConfig({
     actionTimeout: 10_000,
     navigationTimeout: 20_000,
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })
