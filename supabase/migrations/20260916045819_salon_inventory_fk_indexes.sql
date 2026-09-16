@@ -1,0 +1,2 @@
+create index salon_inventory_movements_org_item_fk_idx
+  on public.salon_inventory_movements(organization_id, inventory_item_id);
