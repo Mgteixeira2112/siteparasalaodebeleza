@@ -13,7 +13,11 @@ permissions:
 
 jobs:
   playwright:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -37,7 +41,26 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright
+      - name: Test local browser smoke
+        env:
+          E2E_LOCAL: '1'
+          E2E_BASE_URL: http://127.0.0.1:4173/
+        run: npx playwright test tests/e2e/smoke.spec.ts
+
+      - name: Check published site availability
+        run: node scripts/wait-for-pages.mjs
+
+      - name: Check authenticated coverage
+        if: always()
+        run: |
+          if [ -z "$E2E_EMAIL" ] || [ -z "$E2E_PASSWORD" ]; then
+            echo '::warning::E2E_EMAIL/E2E_PASSWORD ausentes; testes autenticados NÃO estão homologados.'
+            echo '⚠️ Testes autenticados não executados: configure E2E_EMAIL e E2E_PASSWORD em Actions Secrets.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Credenciais E2E presentes; executar e verificar resultados autenticados.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Test published application
         run: npm run test:e2e
 
       - name: Upload Playwright report
