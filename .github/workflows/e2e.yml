@@ -54,8 +54,9 @@ jobs:
         if: always()
         run: |
           if [ -z "$E2E_EMAIL" ] || [ -z "$E2E_PASSWORD" ]; then
-            echo '::warning::E2E_EMAIL/E2E_PASSWORD ausentes; testes autenticados NÃO estão homologados.'
-            echo '⚠️ Testes autenticados não executados: configure E2E_EMAIL e E2E_PASSWORD em Actions Secrets.' >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::E2E_EMAIL/E2E_PASSWORD ausentes; testes autenticados NÃO estão homologados.'
+            echo '❌ Testes autenticados não executados: configure E2E_EMAIL e E2E_PASSWORD nos Repository secrets em Settings → Secrets and variables → Actions.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           else
             echo 'Credenciais E2E presentes; executar e verificar resultados autenticados.' >> "$GITHUB_STEP_SUMMARY"
           fi
