@@ -25,9 +25,10 @@ test.describe('fluxo autenticado do salão', () => {
     const caixa = page.getByRole('heading', { name: 'Caixa' }).locator('..')
     const paymentButton = caixa.getByRole('button', { name: /Registrar quitação de/i }).first()
 
-    if (await paymentButton.count() === 0) {
-      test.skip(true, 'Nenhuma comanda aberta com saldo para testar cancelamento')
-    }
+    await expect(
+      paymentButton,
+      'Homologação financeira exige uma comanda aberta com saldo na organização de teste.',
+    ).toBeVisible()
 
     page.once('dialog', async (dialog) => {
       expect(dialog.type()).toBe('confirm')
